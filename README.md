@@ -37,6 +37,13 @@ npm run build
 - 构建产物目录：`dist/`
 - 压缩包：`chatgpt-project-branch-tree.zip`
 
+## 主要功能效果演示
+1. 节点搜索，回复折叠，节点跳转
+<img width="1884" height="1100" alt="20260509160201_rec_" src="https://github.com/user-attachments/assets/6ffc0bcf-bde0-46a5-aa69-032b81b14435" />
+2. 分支管理，跨对话跳转
+<img width="2028" height="1022" alt="20260509161039_rec_" src="https://github.com/user-attachments/assets/47b3046e-0adb-4326-95ea-be3033deb083" />
+
+
 ## 开发
 
 ```bash
