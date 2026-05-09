@@ -11,10 +11,10 @@ export async function highlightNode(node: QuestionNode): Promise<boolean> {
 }
 
 async function waitForMessageElement(node: QuestionNode): Promise<HTMLElement | undefined> {
-  for (let attempt = 0; attempt < 25; attempt += 1) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
     const element = findMessageElement(node);
     if (element) return element;
-    await sleep(160);
+    await sleep(250);
   }
   return undefined;
 }

@@ -2,7 +2,7 @@
 
 Chrome Manifest V3 本地扩展，用来把 ChatGPT 项目内的对话抽象成可交互的提问分支树。扩展只在本机运行，扫描结果、布局、收藏、节点说明、笔记和分支样式都保存在 Chrome 本地存储中，并支持 JSON 导入导出。
 
-当前版本：`1.0.5`
+当前版本：`1.0.6`
 
 ## 功能
 
@@ -128,6 +128,13 @@ npm run build
 
 - 修复 `content.js` 被拆出 ESM import 后在 Chrome content script 中报 `Cannot use import statement outside a module` 的问题。
 - content script 和 page-world bridge 改为独立自包含 IIFE 产物，并增强构建校验，防止压缩后的 `import{...}` 漏检。
+
+## 1.0.6 更新
+
+- 修复点击节点跳转时自动刷新并发扫描导致 ChatGPT 会话详情接口 429 的问题。
+- 节点跳转期间会短暂停止静默刷新，跳转后再恢复自动更新。
+- 节点跳转只在目标对话变化时切换 URL，并增加消息高亮重试时间。
+- 会话详情扫描增加请求间隔和 429 退避重试，降低触发限流的概率。
 
 ## 限制
 

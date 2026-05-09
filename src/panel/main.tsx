@@ -130,6 +130,8 @@ function App(): React.ReactElement {
   const treeHandleRef = useRef<TreeViewHandle | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const liveUpdateRef = useRef(false);
+  const navigationInFlightRef = useRef(false);
+  const autoRefreshPausedUntilRef = useRef(0);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const canUseExtension = hasChromeRuntime();
   const version = canUseExtension ? chrome.runtime.getManifest().version : "1.0.4";
@@ -227,6 +229,7 @@ function App(): React.ReactElement {
     if (!appSettings.autoRefreshEnabled) return;
     const timer = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
+      if (Date.now() < autoRefreshPausedUntilRef.current) return;
       void refreshScanSilently();
     }, appSettings.autoRefreshSeconds * 1000);
     return () => window.clearInterval(timer);
@@ -293,7 +296,8 @@ function App(): React.ReactElement {
   }
 
   async function refreshScanSilently(): Promise<void> {
-    if (!canUseExtension || !selectedProject || busy || liveUpdateRef.current) return;
+    if (!canUseExtension || !selectedProject || busy || liveUpdateRef.current || navigationInFlightRef.current) return;
+    if (Date.now() < autoRefreshPausedUntilRef.current) return;
     liveUpdateRef.current = true;
     const previousScan = scan;
     try {
@@ -355,8 +359,20 @@ function App(): React.ReactElement {
   async function navigateToNode(node: QuestionNode): Promise<void> {
     setSelectedNodeId(node.id);
     if (!canUseExtension) return;
-    const response = await sendMessage({ type: "PANEL_NAVIGATE_NODE", node });
-    if (!response.ok) setError(response.error);
+    setError(undefined);
+    navigationInFlightRef.current = true;
+    autoRefreshPausedUntilRef.current = Date.now() + 20_000;
+    try {
+      const response = await sendMessage({ type: "PANEL_NAVIGATE_NODE", node });
+      if (!response.ok) {
+        setError(response.error);
+      } else if ("navigated" in response && !response.navigated) {
+        setError("已打开对应对话，但没有在当前页面定位到这条消息。请稍等页面渲染完成后再点一次。");
+      }
+    } finally {
+      navigationInFlightRef.current = false;
+      autoRefreshPausedUntilRef.current = Date.now() + 8_000;
+    }
   }
 
   async function collapseAssistant(mode: "collapse" | "expand" | "toggle"): Promise<void> {

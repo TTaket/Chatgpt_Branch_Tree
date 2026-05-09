@@ -8,6 +8,7 @@ import type {
   StoredState
 } from "../shared/types";
 import { preserveFailedConversationBranches } from "../shared/tree";
+import { conversationIdFromUrl } from "../shared/url";
 
 const STORAGE_KEY = "gptbt_state";
 const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -131,14 +132,12 @@ async function handlePanelRequest(request: BackgroundRequest): Promise<Backgroun
       const tab = await getActiveTab();
       if (!tab?.id) return { ok: false, error: "No active ChatGPT tab found." };
       await setStoredState({ selectedNodeId: request.node.id });
-      if (request.node.url && tab.url !== request.node.url) {
+      const currentConversationId = tab.url ? conversationIdFromUrl(tab.url) : undefined;
+      if (request.node.url && currentConversationId !== request.node.conversationId) {
         await chrome.tabs.update(tab.id, { url: request.node.url });
         await waitForTabComplete(tab.id);
       }
-      const highlight = await sendToTab(tab.id, {
-        type: "GPTBT_HIGHLIGHT_NODE",
-        node: request.node
-      });
+      const highlight = await highlightNodeInTab(tab.id, request.node);
       if (!highlight.ok) return highlight;
       return { ok: true, navigated: "highlighted" in highlight ? highlight.highlighted : true };
     }
@@ -147,6 +146,19 @@ async function handlePanelRequest(request: BackgroundRequest): Promise<Backgroun
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
+}
+
+async function highlightNodeInTab(tabId: number, node: import("../shared/types").QuestionNode): Promise<ContentResponse> {
+  let lastResponse: ContentResponse | undefined;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    lastResponse = await sendToTab(tabId, {
+      type: "GPTBT_HIGHLIGHT_NODE",
+      node
+    });
+    if (!lastResponse.ok || ("highlighted" in lastResponse && lastResponse.highlighted)) return lastResponse;
+    await delay(900 + attempt * 700);
+  }
+  return lastResponse ?? { ok: false, error: "No highlight response from ChatGPT tab." };
 }
 
 async function sendToActiveContent(request: ContentRequest): Promise<ContentResponse> {
