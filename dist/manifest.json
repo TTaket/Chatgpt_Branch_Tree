@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT 项目分支树",
+  "description": "将 ChatGPT 项目内的提问映射为可跳转的分支树，并折叠助手回复。",
+  "version": "1.0.3",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "tabs", "scripting", "sidePanel"],
+  "host_permissions": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "ChatGPT 分支树"
+  },
+  "side_panel": {
+    "default_path": "src/panel/sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+      "js": ["pageBridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
