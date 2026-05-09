@@ -197,7 +197,11 @@ async function doActiveScan(targetProjectId?: string): Promise<{
         label: `读取对话「${item.title}」`
       });
       const parsed = conversationFromRecord(detail, item);
-      if (parsed) conversations.push(parsed);
+      if (parsed) {
+        conversations.push(parsed);
+      } else {
+        warnings.push(`对话「${item.title}」读取失败：接口返回内容缺少可解析的 mapping`);
+      }
     } catch (error) {
       warnings.push(`对话「${item.title}」读取失败：${error instanceof Error ? error.message : String(error)}`);
     }

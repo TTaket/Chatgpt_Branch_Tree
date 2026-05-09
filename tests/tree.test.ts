@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DomConversationSnapshot, InternalConversation } from "../src/shared/types";
-import { scanFromDomSnapshot, scanFromInternalConversations } from "../src/shared/tree";
+import { preserveFailedConversationBranches, scanFromDomSnapshot, scanFromInternalConversations } from "../src/shared/tree";
 import { fingerprintText } from "../src/shared/text";
 
 describe("tree builders", () => {
@@ -349,6 +349,66 @@ describe("tree builders", () => {
 
     expect(scan.nodes.map((node) => node.prompt)).toEqual(["Visible question"]);
     expect(scan.edges).toHaveLength(0);
+  });
+
+  it("keeps the previous branch when a conversation detail fetch fails", () => {
+    const previous = scanFromInternalConversations({
+      projectId: "p1",
+      projectName: "Project",
+      scannedUrl: "https://chatgpt.com/g/p1/project",
+      conversations: [
+        {
+          id: "c-ok",
+          title: "Updated branch",
+          mapping: {
+            u1: {
+              id: "u1",
+              authorRole: "user",
+              text: "Still loaded",
+              childrenIds: []
+            }
+          }
+        },
+        {
+          id: "c-failed",
+          title: "Cached branch",
+          mapping: {
+            u2: {
+              id: "u2",
+              authorRole: "user",
+              text: "Keep me if fetch fails",
+              childrenIds: []
+            }
+          }
+        }
+      ]
+    });
+    const incoming = scanFromInternalConversations({
+      projectId: "p1",
+      projectName: "Project",
+      scannedUrl: "https://chatgpt.com/g/p1/project",
+      warnings: ["对话「Cached branch」读取失败：ChatGPT 接口 500"],
+      conversations: [
+        {
+          id: "c-ok",
+          title: "Updated branch",
+          mapping: {
+            u1: {
+              id: "u1",
+              authorRole: "user",
+              text: "Still loaded",
+              childrenIds: []
+            }
+          }
+        }
+      ]
+    });
+
+    const scan = preserveFailedConversationBranches(incoming, previous);
+
+    expect(scan.conversations.map((conversation) => conversation.id)).toEqual(["c-ok", "c-failed"]);
+    expect(scan.nodes.map((node) => node.prompt)).toContain("Keep me if fetch fails");
+    expect(scan.warnings.at(-1)).toContain("已保留上次缓存");
   });
 
   it("creates stable fingerprints for equivalent whitespace", () => {

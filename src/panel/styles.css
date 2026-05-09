@@ -750,8 +750,10 @@ h1 {
 }
 
 .details {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+  min-height: 740px;
   padding: 12px;
 }
 
@@ -1050,8 +1052,9 @@ h1 {
   border-radius: 8px;
   display: grid;
   gap: 8px;
-  margin-top: 28px;
-  min-height: 330px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  margin-top: auto;
+  min-height: 390px;
   padding: 10px;
 }
 
@@ -1063,10 +1066,18 @@ h1 {
   background: #ffffff;
 }
 
+.comment-panel.notes-collapsed {
+  margin-top: 28px;
+  min-height: auto;
+}
+
 .comment-list {
-  display: grid;
+  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 7px;
-  max-height: 260px;
+  max-height: none;
+  min-height: 0;
   overflow: auto;
   padding-right: 2px;
 }
@@ -1076,6 +1087,7 @@ h1 {
   border: 1px solid #d8dfdd;
   border-radius: 7px;
   display: grid;
+  flex: 0 0 auto;
   gap: 5px;
   min-height: 38px;
   padding: 28px 8px 8px;

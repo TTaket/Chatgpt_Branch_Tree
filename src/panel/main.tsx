@@ -98,6 +98,7 @@ function App(): React.ReactElement {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [appSettings, setAppSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [settingsDraft, setSettingsDraft] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settingsIntervalDraft, setSettingsIntervalDraft] = useState(String(DEFAULT_SETTINGS.autoRefreshSeconds));
   const [persistedByProject, setPersistedByProject] = useState<Record<string, ProjectPersistedState>>({});
   const [layoutOffsets, setLayoutOffsets] = useState<Record<string, { x: number; y: number }>>({});
   const [undoLayoutStack, setUndoLayoutStack] = useState<Array<Record<string, { x: number; y: number }>>>([]);
@@ -131,7 +132,7 @@ function App(): React.ReactElement {
   const liveUpdateRef = useRef(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const canUseExtension = hasChromeRuntime();
-  const version = canUseExtension ? chrome.runtime.getManifest().version : "1.0.3";
+  const version = canUseExtension ? chrome.runtime.getManifest().version : "1.0.4";
 
   function showToast(message: string): void {
     setToastMessage(message);
@@ -527,9 +528,13 @@ function App(): React.ReactElement {
   }
 
   async function saveAppSettings(): Promise<void> {
-    const normalized = normalizeSettings(settingsDraft);
+    const normalized = normalizeSettings({
+      ...settingsDraft,
+      autoRefreshSeconds: normalizeIntervalDraft(settingsIntervalDraft, appSettings.autoRefreshSeconds)
+    });
     setAppSettings(normalized);
     setSettingsDraft(normalized);
+    setSettingsIntervalDraft(String(normalized.autoRefreshSeconds));
     if (!canUseExtension) {
       setSettingsOpen(false);
       showToast("设置已应用到演示会话");
@@ -719,6 +724,7 @@ function App(): React.ReactElement {
             title="设置"
             onClick={() => {
               setSettingsDraft(appSettings);
+              setSettingsIntervalDraft(String(appSettings.autoRefreshSeconds));
               setSettingsOpen(true);
             }}
           >
@@ -1074,7 +1080,7 @@ function App(): React.ReactElement {
                   </div>
                 </section>
               </div>
-              <section className={`comment-panel ${(nodeNotes[selectedNode.id] ?? []).length > 0 ? "comment-has-items" : "comment-empty"}`}>
+              <section className={`comment-panel ${notesCollapsed ? "notes-collapsed" : ""} ${(nodeNotes[selectedNode.id] ?? []).length > 0 ? "comment-has-items" : "comment-empty"}`}>
                 <div className="section-head">
                   <div>
                     <h3>笔记</h3>
@@ -1329,13 +1335,13 @@ function App(): React.ReactElement {
                     type="number"
                     min={5}
                     max={120}
-                    value={settingsDraft.autoRefreshSeconds}
-                    onChange={(event) =>
-                      setSettingsDraft((current) => ({
-                        ...current,
-                        autoRefreshSeconds: Number(event.currentTarget.value)
-                      }))
-                    }
+                    value={settingsIntervalDraft}
+                    onChange={(event) => setSettingsIntervalDraft(event.currentTarget.value)}
+                    onBlur={() => {
+                      const seconds = normalizeIntervalDraft(settingsIntervalDraft, settingsDraft.autoRefreshSeconds);
+                      setSettingsDraft((current) => ({ ...current, autoRefreshSeconds: seconds }));
+                      setSettingsIntervalDraft(String(seconds));
+                    }}
                   />
                 </label>
               </div>
@@ -1411,6 +1417,11 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number)
   return typeof value === "number" && Number.isFinite(value)
     ? Math.min(max, Math.max(min, Math.round(value)))
     : fallback;
+}
+
+function normalizeIntervalDraft(value: string, fallback: number): number {
+  const parsed = Number(value.trim());
+  return clampNumber(parsed, 5, 120, fallback);
 }
 
 function buildBranchGroups(

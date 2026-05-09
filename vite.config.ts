@@ -11,15 +11,11 @@ export default defineConfig({
     rollupOptions: {
       input: {
         sidepanel: resolve(__dirname, "src/panel/sidepanel.html"),
-        background: resolve(__dirname, "src/background/background.ts"),
-        content: resolve(__dirname, "src/content/content.ts"),
-        pageBridge: resolve(__dirname, "src/page-bridge/pageBridge.ts")
+        background: resolve(__dirname, "src/background/background.ts")
       },
       output: {
         entryFileNames: (chunk) => {
           if (chunk.name === "background") return "background.js";
-          if (chunk.name === "content") return "content.js";
-          if (chunk.name === "pageBridge") return "pageBridge.js";
           return "assets/[name]-[hash].js";
         },
         chunkFileNames: "assets/[name]-[hash].js",

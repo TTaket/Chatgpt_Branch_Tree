@@ -2,7 +2,7 @@
 
 Chrome Manifest V3 本地扩展，用来把 ChatGPT 项目内的对话抽象成可交互的提问分支树。扩展只在本机运行，扫描结果、布局、收藏、节点说明、笔记和分支样式都保存在 Chrome 本地存储中，并支持 JSON 导入导出。
 
-当前版本：`1.0.3`
+当前版本：`1.0.5`
 
 ## 功能
 
@@ -48,7 +48,8 @@ npm run build
 构建流程会：
 
 - 使用 TypeScript 做类型检查。
-- 使用 Vite 打包 side panel、background、content script、page-world bridge。
+- 使用 Vite 打包 side panel 和 background。
+- 单独把 content script 和 page-world bridge 打成自包含 IIFE，避免 Chrome 以普通 content script 执行时遇到 ESM import 报错。
 - 复制 `public/manifest.json` 到 `dist/manifest.json`。
 - 将 content/page bridge 包裹在函数作用域内，避免重复注入时污染全局作用域。
 
@@ -115,6 +116,18 @@ npm run build
 - 节点说明改为轻量行内展示：“节点说明：xxx”，双击即可编辑。
 - 笔记区下沉并扩大固定滚动区域。
 - 分支颜色选择改为居中大弹窗，并扩充可选颜色。
+
+## 1.0.4 更新
+
+- 修复笔记过多时条目被压缩导致文字不可见的问题。
+- 笔记区进一步下沉到详情区域底部，并保持固定高度滚动。
+- 单条分支/对话拉取失败时，保留上次缓存的该分支，不再从树图中移除。
+- 修复设置里修改自动更新间隔时，空值或非法数字导致报错的问题。
+
+## 1.0.5 更新
+
+- 修复 `content.js` 被拆出 ESM import 后在 Chrome content script 中报 `Cannot use import statement outside a module` 的问题。
+- content script 和 page-world bridge 改为独立自包含 IIFE 产物，并增强构建校验，防止压缩后的 `import{...}` 漏检。
 
 ## 限制
 
