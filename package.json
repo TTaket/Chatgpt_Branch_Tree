@@ -1,12 +1,12 @@
 {
   "name": "chatgpt-project-branch-tree",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "private": true,
   "type": "module",
   "description": "Chrome MV3 extension that maps ChatGPT project conversations into a navigable prompt branch tree.",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build && node scripts/copy-static.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/build-content.mjs && node scripts/copy-static.mjs",
     "test": "vitest run",
     "preview": "vite preview --host 127.0.0.1"
   },

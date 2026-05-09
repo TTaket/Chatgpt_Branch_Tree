@@ -7,9 +7,13 @@ await Promise.all(["dist/content.js", "dist/pageBridge.js"].map(wrapScriptInFunc
 
 async function wrapScriptInFunctionScope(filePath) {
   const source = await readFile(filePath, "utf8");
-  if (/^\s*import\s/m.test(source)) {
+  if (containsEsmImport(source)) {
     throw new Error(`${filePath} still contains ESM imports; content/page-world scripts must be self-contained.`);
   }
   if (source.startsWith("(() => {")) return;
   await writeFile(filePath, `(() => {\n${source}\n})();\n`);
+}
+
+function containsEsmImport(source) {
+  return /^\s*import(?:[\s"'*{]|\()/m.test(source) || /\bimport\.meta\b/.test(source);
 }

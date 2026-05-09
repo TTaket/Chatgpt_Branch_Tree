@@ -509,3 +509,29 @@ export function mergeScans(preferred: ProjectScan | undefined, fallback: Project
     warnings: [...preferred.warnings, ...fallback.warnings]
   };
 }
+
+export function preserveFailedConversationBranches(
+  incoming: ProjectScan,
+  previous: ProjectScan | undefined
+): ProjectScan {
+  if (!previous || previous.projectId !== incoming.projectId) return incoming;
+  const hasBranchReadFailure = incoming.warnings.some((warning) =>
+    /对话「.+」读取失败|分支.+读取失败|拉取失败/.test(warning)
+  );
+  if (!hasBranchReadFailure) return incoming;
+
+  const incomingConversationIds = new Set(incoming.conversations.map((conversation) => conversation.id));
+  const missingPreviousConversations = previous.conversations.filter(
+    (conversation) => !incomingConversationIds.has(conversation.id)
+  );
+  if (missingPreviousConversations.length === 0) return incoming;
+
+  const merged = mergeScans(incoming, previous);
+  return {
+    ...merged,
+    warnings: [
+      ...incoming.warnings,
+      `部分分支拉取失败，已保留上次缓存的 ${missingPreviousConversations.length} 条分支。`
+    ]
+  };
+}

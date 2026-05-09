@@ -7,6 +7,7 @@ import type {
   ProjectPersistedState,
   StoredState
 } from "../shared/types";
+import { preserveFailedConversationBranches } from "../shared/tree";
 
 const STORAGE_KEY = "gptbt_state";
 const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -56,6 +57,7 @@ async function handlePanelRequest(request: BackgroundRequest): Promise<Backgroun
     }
 
     if (request.type === "PANEL_SCAN_PROJECT") {
+      const current = await getStoredState();
       const response = await sendToActiveContent({
         type: "GPTBT_SCAN_PROJECT",
         force: request.force,
@@ -63,8 +65,9 @@ async function handlePanelRequest(request: BackgroundRequest): Promise<Backgroun
       });
       if (!response.ok) return response;
       if (!("scan" in response)) return { ok: false, error: "ChatGPT tab returned an unexpected scan response." };
-      await setStoredState({ currentScan: response.scan });
-      return { ok: true, scan: response.scan };
+      const scan = preserveFailedConversationBranches(response.scan, current.currentScan);
+      await setStoredState({ currentScan: scan });
+      return { ok: true, scan };
     }
 
     if (request.type === "PANEL_COLLAPSE_ASSISTANT") {
