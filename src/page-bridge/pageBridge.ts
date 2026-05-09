@@ -122,21 +122,28 @@ async function apiFetch(
   if (options.projectHeaderId) headers["chatgpt-project-id"] = options.projectHeaderId;
   applyTargetHeaders(headers, url);
 
-  const response = await originalFetch(url, {
-    method: "GET",
-    headers,
-    credentials: "include",
-    cache: "no-store"
-  });
+  let response: Response | undefined;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    response = await originalFetch(url, {
+      method: "GET",
+      headers,
+      credentials: "include",
+      cache: "no-store"
+    });
+    if (response.status !== 429 || attempt === 2) break;
+    await delay(retryDelayMs(response, attempt));
+  }
 
-  if (!response.ok) {
+  if (!response?.ok) {
     const authHint = authHeaders.authorization
       ? ""
       : "。还没有捕获到 ChatGPT 的授权请求头，请刷新 ChatGPT 页面，等页面加载完成后再试";
-    const bodyText = await response.text().catch(() => "");
+    const bodyText = await response?.text().catch(() => "") ?? "";
     const bodyHint = bodyText ? `，${bodyText.slice(0, 180)}` : "";
     const label = options.label ? `${options.label} ` : "";
-    throw new Error(`${label}ChatGPT 接口 ${response.status}：${response.statusText}${bodyHint}${authHint}`);
+    const status = response?.status ?? 0;
+    const statusText = response?.statusText ?? "No response";
+    throw new Error(`${label}ChatGPT 接口 ${status}：${statusText}${bodyHint}${authHint}`);
   }
 
   return response.json();
@@ -192,6 +199,7 @@ async function doActiveScan(targetProjectId?: string): Promise<{
 
   for (const item of conversationItems) {
     try {
+      await delay(220);
       const detail = await apiFetch(`/backend-api/conversation/${encodeURIComponent(item.id)}`, {
         projectHeaderId: currentProjectId,
         label: `读取对话「${item.title}」`
@@ -493,6 +501,21 @@ function stringValue(value: unknown): string | undefined {
 function cursorValue(value: unknown): string | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return stringValue(value);
+}
+
+function retryDelayMs(response: Response, attempt: number): number {
+  const retryAfter = response.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds > 0) return Math.min(seconds * 1000, 8000);
+    const dateMs = Date.parse(retryAfter);
+    if (Number.isFinite(dateMs)) return Math.min(Math.max(dateMs - Date.now(), 1000), 8000);
+  }
+  return 1200 + attempt * 1800;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function textFromUnknown(value: unknown): string {
